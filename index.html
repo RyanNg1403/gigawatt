@@ -1,0 +1,949 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover, interactive-widget=overlays-content">
+<meta name="theme-color" content="#0F1B2D">
+<title>GIGAWATT — AI Compute Tycoon</title>
+<style>
+html, body, #canvas {
+	margin: 0;
+	padding: 0;
+	border: 0;
+}
+
+html, body {
+	width: 100%;
+	height: 100%;
+	background-color: #0F1B2D;
+}
+
+body {
+	color: #E7EEF7;
+	overflow: hidden;
+	touch-action: none;
+	user-select: none;
+	-webkit-user-select: none;
+	-webkit-tap-highlight-color: transparent;
+	font-family: Inter, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+
+#canvas {
+	display: block;
+	outline: none;
+}
+
+#status {
+	position: absolute;
+	inset: 0;
+	z-index: 10;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	background: radial-gradient(ellipse at 50% 40%, #16294A 0%, #0F1B2D 60%, #0A1322 100%);
+	transition: opacity 0.35s ease;
+}
+
+#status.gw-fade {
+	opacity: 0;
+	pointer-events: none;
+}
+
+.gw-load {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	width: min(440px, 80vw);
+}
+
+#status-splash {
+	display: none;
+	width: min(144px, 22vh);
+	height: auto;
+	margin-bottom: 20px;
+	filter: drop-shadow(0 6px 18px rgba(46, 196, 182, 0.25));
+}
+
+#status-splash.gw-show {
+	display: block;
+}
+
+.gw-word {
+	font-size: clamp(32px, 6vh, 56px);
+	font-weight: 800;
+	letter-spacing: 0.18em;
+	margin-right: -0.18em;
+	color: #FFFFFF;
+}
+
+.gw-word span {
+	color: #2EC4B6;
+}
+
+.gw-sub {
+	margin-top: 6px;
+	font-size: 14px;
+	letter-spacing: 0.32em;
+	text-transform: uppercase;
+	color: #9DB0C8;
+}
+
+.gw-bar {
+	position: relative;
+	width: 100%;
+	height: 8px;
+	margin-top: 36px;
+	border-radius: 4px;
+	background: #0A1322;
+	box-shadow: inset 0 0 0 1px #2A3F5F;
+	overflow: hidden;
+}
+
+#gw-bar-fill {
+	width: 0%;
+	height: 100%;
+	border-radius: 4px;
+	background: linear-gradient(90deg, #23A498, #2EC4B6 60%, #4FD8CB);
+	transition: width 0.2s ease-out;
+}
+
+.gw-bar.gw-indeterminate #gw-bar-fill {
+	width: 30%;
+	animation: gw-slide 1.2s ease-in-out infinite;
+}
+
+@keyframes gw-slide {
+	0% { transform: translateX(-100%); }
+	100% { transform: translateX(340%); }
+}
+
+#gw-progress-text {
+	margin-top: 12px;
+	min-height: 18px;
+	font-size: 13px;
+	color: #9DB0C8;
+	font-variant-numeric: tabular-nums;
+}
+
+#status-notice {
+	display: none;
+	margin-top: 24px;
+	padding: 14px 18px;
+	border-radius: 8px;
+	border: 1px solid #B9343A;
+	background: #2A1620;
+	color: #FFD9D9;
+	font-size: 14px;
+	line-height: 1.4;
+	text-align: center;
+}
+
+#gw-fullscreen {
+	position: absolute;
+	right: 10px;
+	bottom: 10px;
+	z-index: 5;
+	display: none;
+	width: 32px;
+	height: 32px;
+	padding: 0;
+	border: 1px solid #2A3F5F;
+	border-radius: 6px;
+	background: rgba(10, 19, 34, 0.7);
+	color: #E7EEF7;
+	cursor: pointer;
+	opacity: 0.45;
+	transition: opacity 0.15s ease;
+}
+
+#gw-fullscreen:hover {
+	opacity: 1;
+	border-color: #2EC4B6;
+}
+
+#gw-fullscreen.gw-show {
+	display: block;
+}
+
+#gw-fullscreen svg {
+	display: block;
+	margin: auto;
+}
+</style>
+<!-- gw-touch:begin head (mobile spec §2.1 page guards, context-loss overlay; web/README.md "Touch and mobile") -->
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<style>
+html, body {
+	overscroll-behavior: none;
+}
+
+body {
+	position: fixed;
+	inset: 0;
+	-webkit-touch-callout: none;
+}
+
+#canvas {
+	touch-action: none;
+	-webkit-touch-callout: none;
+}
+
+#gw-fullscreen {
+	width: 44px;
+	height: 44px;
+	right: calc(10px + env(safe-area-inset-right));
+	bottom: calc(10px + env(safe-area-inset-bottom));
+}
+
+.gw-iphone #gw-fullscreen {
+	display: none !important;
+}
+
+#gw-safe-probe {
+	position: fixed;
+	top: 0;
+	left: 0;
+	width: 0;
+	height: 0;
+	visibility: hidden;
+	pointer-events: none;
+	padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+}
+
+#gw-ctx-lost {
+	position: fixed;
+	inset: 0;
+	z-index: 20;
+	display: none;
+	align-items: center;
+	justify-content: center;
+	padding: 24px;
+	background: rgba(10, 19, 34, 0.92);
+	color: #E7EEF7;
+	font-size: 18px;
+	text-align: center;
+	cursor: pointer;
+}
+
+#gw-ctx-lost.gw-show {
+	display: flex;
+}
+
+#gw-ctx-lost div {
+	max-width: 420px;
+	padding: 20px 24px;
+	border: 1px solid #2EC4B6;
+	border-radius: 10px;
+	background: #0F1B2D;
+	line-height: 1.5;
+}
+</style>
+<!-- gw-touch:end head -->
+
+<link id="-gd-engine-icon" rel="icon" type="image/png" href="index.icon.png" />
+<link rel="apple-touch-icon" href="index.apple-touch-icon.png"/>
+
+</head>
+<body>
+<canvas id="canvas" tabindex="0">Your browser does not support the canvas tag.</canvas>
+<noscript>GIGAWATT needs JavaScript and WebGL 2 to run.</noscript>
+
+<button id="gw-fullscreen" type="button" tabindex="-1" title="Fullscreen" aria-label="Toggle fullscreen">
+	<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
+		<path d="M1.5 5.5v-4h4M10.5 1.5h4v4M14.5 10.5v4h-4M5.5 14.5h-4v-4"/>
+	</svg>
+</button>
+
+<!-- gw-touch:begin body -->
+<div id="gw-safe-probe"></div>
+<div id="gw-ctx-lost" role="button" tabindex="-1"><div><b>The graphics context was lost.</b><br>Tap to reload. Your progress is saved.</div></div>
+<!-- gw-touch:end body -->
+
+<div id="status">
+	<div class="gw-load">
+		<img id="status-splash" class="show-image--true fullsize--true use-filter--true" src="index.png" alt="">
+		<div class="gw-word">GIGA<span>WATT</span></div>
+		<div class="gw-sub">AI Compute Tycoon</div>
+		<div class="gw-bar gw-indeterminate" id="gw-bar"><div id="gw-bar-fill"></div></div>
+		<div id="gw-progress-text">Loading…</div>
+		<div id="status-notice"></div>
+	</div>
+</div>
+
+<script>
+// Page-side glue for the game (see web/README.md). GDScript talks to it through
+// scripts/platform/platform.gd; tests read window.gwShell.
+(function () {
+	'use strict';
+	const canvas = document.getElementById('canvas');
+	const G = window.gwShell = {
+		version: 1,
+		state: 'loading',
+		unsaved: false,
+		audioUnlocked: false,
+		audioContexts: [],
+		timing: { shellStart: performance.now(), marks: {} },
+		progress: { current: 0, total: 0 },
+		stats: { keysRedirected: 0, keysToBrowser: 0, contextMenusBlocked: 0, leavePrompts: 0 },
+	};
+
+	G.mark = function (name) {
+		if (!(name in G.timing.marks)) {
+			G.timing.marks[name] = performance.now();
+		}
+	};
+
+	G.setUnsaved = function (value) {
+		G.unsaved = !!value;
+	};
+
+	G.focusCanvas = function () {
+		if (document.activeElement !== canvas) {
+			canvas.focus({ preventScroll: true });
+		}
+	};
+
+	// --- Audio: hold every AudioContext suspended until the first user gesture. Browsers apply an
+	// autoplay policy of their own, but not consistently (embedded iframes, automation, some
+	// flags), so the shell enforces it for all of them.
+	const NativeAudioContext = window.AudioContext || window.webkitAudioContext;
+	if (NativeAudioContext) {
+		class GatedAudioContext extends NativeAudioContext {
+			constructor(...args) {
+				super(...args);
+				G.audioContexts.push(this);
+				if (!G.audioUnlocked) {
+					super.suspend().catch(() => {});
+				}
+			}
+
+			resume() {
+				if (!G.audioUnlocked) {
+					return Promise.resolve();
+				}
+				return super.resume();
+			}
+		}
+		window.AudioContext = GatedAudioContext;
+		if (window.webkitAudioContext) {
+			window.webkitAudioContext = GatedAudioContext;
+		}
+	}
+
+	function unlockAudio(evt) {
+		if (G.audioUnlocked || !evt.isTrusted) {
+			return;
+		}
+		if (evt.type === 'keydown' && (evt.key === 'Escape' || isModifier(evt))) {
+			return; // not activation-triggering in Chrome
+		}
+		G.audioUnlocked = true;
+		G.mark('audio_unlocked');
+		for (const ctx of G.audioContexts) {
+			if (ctx.state !== 'closed') {
+				ctx.resume().catch(() => {});
+			}
+		}
+	}
+	for (const type of ['pointerdown', 'mousedown', 'keydown', 'touchend']) {
+		window.addEventListener(type, unlockAudio, true);
+	}
+
+	// --- Keyboard. Godot's canvas listener calls preventDefault() on every key it sees, which
+	// covers Space/Tab/Backspace/'/'/arrows while the canvas has focus, but would also swallow
+	// browser shortcuts. Shortcuts are kept away from the canvas so the browser handles them;
+	// keys that land elsewhere (focus lost to <body>) are routed to the canvas.
+	const GAME_CTRL_CODES = new Set(['KeyZ']); // Ctrl+Z undo (GDD §12.4)
+
+	function isModifier(evt) {
+		return evt.key === 'Shift' || evt.key === 'Control' || evt.key === 'Alt' || evt.key === 'Meta'
+			|| evt.key === 'AltGraph' || evt.key === 'CapsLock' || evt.key === 'OS';
+	}
+
+	function isBrowserShortcut(evt) {
+		if (isModifier(evt)) {
+			return false;
+		}
+		if (evt.ctrlKey || evt.metaKey) {
+			return !(evt.ctrlKey && !evt.metaKey && !evt.altKey && GAME_CTRL_CODES.has(evt.code));
+		}
+		if (evt.altKey) {
+			return true;
+		}
+		return /^F([1-9]|1[0-9]|2[0-4])$/.test(evt.key);
+	}
+
+	function isEditable(el) {
+		if (!el || el === canvas) {
+			return false;
+		}
+		const tag = el.tagName;
+		return tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || el.isContentEditable;
+	}
+
+	function onKey(evt) {
+		if (isEditable(evt.target)) {
+			return;
+		}
+		if (isBrowserShortcut(evt)) {
+			evt.stopImmediatePropagation();
+			G.stats.keysToBrowser++;
+			return;
+		}
+		if (G.state !== 'running' || evt.target === canvas) {
+			return;
+		}
+		evt.preventDefault();
+		evt.stopImmediatePropagation();
+		G.focusCanvas();
+		G.stats.keysRedirected++;
+		canvas.dispatchEvent(new KeyboardEvent(evt.type, {
+			key: evt.key, code: evt.code, location: evt.location, repeat: evt.repeat,
+			shiftKey: evt.shiftKey, ctrlKey: evt.ctrlKey, altKey: evt.altKey, metaKey: evt.metaKey,
+			bubbles: true, cancelable: true,
+		}));
+	}
+	window.addEventListener('keydown', onKey, true);
+	window.addEventListener('keyup', onKey, true);
+
+	// --- Mouse: no context menu anywhere on the page (right-drag pans the map), no middle-click
+	// autoscroll, keep keyboard focus on the canvas.
+	document.addEventListener('contextmenu', function (evt) {
+		if (!isEditable(evt.target)) {
+			evt.preventDefault();
+			G.stats.contextMenusBlocked++;
+		}
+	}, true);
+	canvas.addEventListener('mousedown', function (evt) {
+		if (evt.button === 1) {
+			evt.preventDefault();
+		}
+	});
+	canvas.addEventListener('auxclick', function (evt) {
+		evt.preventDefault();
+	});
+	window.addEventListener('focus', function () {
+		if (G.state === 'running' && !isEditable(document.activeElement)) {
+			G.focusCanvas();
+		}
+	});
+	document.addEventListener('visibilitychange', function () {
+		if (document.visibilityState === 'visible' && G.state === 'running') {
+			G.focusCanvas();
+		}
+	});
+
+	// --- "Leave page?" only while the game reports unsaved progress.
+	window.addEventListener('beforeunload', function (evt) {
+		if (!G.unsaved) {
+			return undefined;
+		}
+		G.stats.leavePrompts++;
+		evt.preventDefault();
+		evt.returnValue = '';
+		return '';
+	});
+
+	// --- Fullscreen (browsers only allow it from a user gesture).
+	const fsButton = document.getElementById('gw-fullscreen');
+	G.isFullscreen = function () {
+		return !!(document.fullscreenElement || document.webkitFullscreenElement);
+	};
+	G.requestFullscreen = function () {
+		const el = document.documentElement;
+		const req = el.requestFullscreen || el.webkitRequestFullscreen;
+		if (!req || G.isFullscreen()) {
+			return false;
+		}
+		const p = req.call(el, { navigationUI: 'hide' });
+		if (p && p.catch) {
+			p.catch((err) => console.warn('gwShell: fullscreen refused:', err && err.message));
+		}
+		return true;
+	};
+	G.exitFullscreen = function () {
+		const exit = document.exitFullscreen || document.webkitExitFullscreen;
+		if (!exit || !G.isFullscreen()) {
+			return false;
+		}
+		const p = exit.call(document);
+		if (p && p.catch) {
+			p.catch(() => {});
+		}
+		return true;
+	};
+	G.toggleFullscreen = function () {
+		return G.isFullscreen() ? G.exitFullscreen() : G.requestFullscreen();
+	};
+	let fsButtonWanted = true;
+	G.setFullscreenButtonVisible = function (visible) {
+		fsButtonWanted = !!visible;
+		updateFullscreenButton();
+	};
+	function updateFullscreenButton() {
+		const supported = document.fullscreenEnabled || document.webkitFullscreenEnabled;
+		const show = fsButtonWanted && supported && G.state === 'running' && !G.isFullscreen();
+		fsButton.classList.toggle('gw-show', !!show);
+	}
+	fsButton.addEventListener('mousedown', (evt) => evt.preventDefault());
+	fsButton.addEventListener('click', function (evt) {
+		evt.preventDefault();
+		G.toggleFullscreen();
+		G.focusCanvas();
+	});
+	document.addEventListener('fullscreenchange', function () {
+		updateFullscreenButton();
+		G.focusCanvas();
+	});
+	document.addEventListener('webkitfullscreenchange', updateFullscreenButton);
+
+	// --- Loading screen.
+	const statusOverlay = document.getElementById('status');
+	const splash = document.getElementById('status-splash');
+	const bar = document.getElementById('gw-bar');
+	const barFill = document.getElementById('gw-bar-fill');
+	const progressText = document.getElementById('gw-progress-text');
+	const notice = document.getElementById('status-notice');
+
+	// Godot exports its own 4:3 engine splash when application/boot_splash/image is unset;
+	// only the square GIGAWATT mark is shown.
+	function maybeShowSplash() {
+		const w = splash.naturalWidth;
+		const h = splash.naturalHeight;
+		if (w > 0 && w === h && !splash.classList.contains('show-image--false')) {
+			splash.classList.add('gw-show');
+		}
+	}
+	if (splash.complete) {
+		maybeShowSplash();
+	} else {
+		splash.addEventListener('load', maybeShowSplash);
+	}
+
+	function setProgress(current, total) {
+		G.progress.current = current;
+		G.progress.total = total;
+		if (current > 0 && total > 0) {
+			bar.classList.remove('gw-indeterminate');
+			const pct = Math.min(100, (100 * current) / total);
+			barFill.style.width = pct.toFixed(1) + '%';
+			progressText.textContent = 'Loading ' + (current / 1048576).toFixed(1) + ' / '
+				+ (total / 1048576).toFixed(1) + ' MB';
+			if (current >= total) {
+				G.mark('download_done');
+				progressText.textContent = 'Starting…';
+			}
+		} else {
+			bar.classList.add('gw-indeterminate');
+		}
+	}
+
+	function showError(err) {
+		console.error(err);
+		G.state = 'error';
+		let text = 'An unknown error occurred.';
+		if (err instanceof Error) {
+			text = err.message;
+		} else if (typeof err === 'string') {
+			text = err;
+		}
+		notice.textContent = '';
+		for (const line of text.split('\n')) {
+			notice.appendChild(document.createTextNode(line));
+			notice.appendChild(document.createElement('br'));
+		}
+		notice.style.display = 'block';
+		bar.style.display = 'none';
+		progressText.style.display = 'none';
+	}
+
+	function onStarted() {
+		G.state = 'running';
+		G.mark('engine_started');
+		statusOverlay.classList.add('gw-fade');
+		setTimeout(() => statusOverlay.remove(), 400);
+		updateFullscreenButton();
+		G.focusCanvas();
+	}
+
+	G.start = function (engine, config, threads) {
+		const missing = Engine.getMissingFeatures({ threads: threads });
+		if (missing.length !== 0) {
+			showError('This browser is missing features GIGAWATT needs:\n' + missing.join('\n')
+				+ '\nPlease use a current Chrome, Edge, Firefox or Safari with WebGL 2.');
+			return;
+		}
+		G.mark('engine_init');
+		engine.startGame({
+			onProgress: setProgress,
+		}).then(onStarted, showError);
+	};
+}());
+</script>
+<!-- gw-touch:begin script (mobile spec §1.1 deviceInfo, §2.1 guards, §2.7 back sentinel, §2.8 vibrate,
+     §6.1 DPR cap, §6.3 rAF cap fallback). Runs before the engine script; see web/README.md. -->
+<script>
+(function () {
+	'use strict';
+	const G = window.gwShell;
+	const canvas = document.getElementById('canvas');
+	const S = Object.assign(G.stats, {
+		backPresses: 0, gesturesBlocked: 0, dblclicksBlocked: 0, touchMovesBlocked: 0,
+		selectsBlocked: 0, vibrations: 0, prompts: 0, contextLost: 0, deviceChanges: 0,
+	});
+	const params = new URLSearchParams(window.location.search);
+	G.overrides = {
+		touch: params.get('touch') || '',
+		layout: params.get('layout') || '',
+		safe: params.get('safe') || '',
+		dpr: params.get('dpr') || '',
+	};
+
+	function isEditable(el) {
+		if (!el || el === canvas) {
+			return false;
+		}
+		const tag = el.tagName;
+		return tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || el.isContentEditable;
+	}
+	function mq(query) {
+		return !!(window.matchMedia && window.matchMedia(query).matches);
+	}
+	function readStore(key) {
+		try {
+			return window.localStorage.getItem(key);
+		} catch (err) {
+			return null;
+		}
+	}
+	function writeStore(key, value) {
+		try {
+			window.localStorage.setItem(key, value);
+		} catch (err) {
+			// storage blocked (private mode): the value applies to this session only
+		}
+	}
+
+	const ua = navigator.userAgent || '';
+	const isIOS = /iPhone|iPad|iPod/.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1);
+	const isIPhone = /iPhone|iPod/.test(ua);
+	document.documentElement.classList.toggle('gw-ios', isIOS);
+	document.documentElement.classList.toggle('gw-iphone', isIPhone);
+
+	function touchOverride() {
+		const t = G.overrides.touch;
+		return t === '1' || t === 'on' || t === 'true' ? true : (t === '0' || t === 'off' || t === 'false' ? false : null);
+	}
+	function touchCapable() {
+		const o = touchOverride();
+		return o !== null ? o : (navigator.maxTouchPoints > 0 || 'ontouchstart' in window);
+	}
+	function coarsePointer() {
+		const o = touchOverride();
+		return o !== null ? o : mq('(pointer: coarse)');
+	}
+
+	// --- DPR cap (§6.1). Godot sizes the canvas and maps input through window.devicePixelRatio, read
+	// every frame, so overriding the getter before the engine loads renders fewer pixels consistently.
+	const dprDesc = Object.getOwnPropertyDescriptor(window, 'devicePixelRatio')
+		|| Object.getOwnPropertyDescriptor(Window.prototype, 'devicePixelRatio');
+	function realDpr() {
+		const v = dprDesc && dprDesc.get ? dprDesc.get.call(window) : 1;
+		return v > 0 ? v : 1;
+	}
+	const MP_BUDGET = { phone: 2.4e6, tablet: 4.2e6 };
+	function screenClass() {
+		const short = Math.min(window.screen.width || window.innerWidth, window.screen.height || window.innerHeight);
+		if (touchCapable() && short < 600) {
+			return 'phone';
+		}
+		return touchCapable() && coarsePointer() ? 'tablet' : 'desktop';
+	}
+	function computeDpr() {
+		const real = realDpr();
+		const forced = parseFloat(G.overrides.dpr);
+		if (forced > 0) {
+			return forced;
+		}
+		const mode = G.renderScale.mode;
+		let d;
+		if (mode === 'auto') {
+			d = Math.min(real, 2);
+			const budget = MP_BUDGET[screenClass()];
+			if (budget) {
+				// screen size is stable across address-bar resizes and rotation
+				const area = Math.max((window.screen.width || 0) * (window.screen.height || 0),
+					window.innerWidth * window.innerHeight, 1);
+				d = Math.min(d, Math.sqrt(budget / area));
+			}
+			if (readStore('gw.battery_saver') === '1') {
+				d *= 0.75;
+			}
+		} else {
+			const pct = parseFloat(mode);
+			d = real * (pct > 0 ? pct / 100 : 1);
+		}
+		return Math.max(Math.min(1, real), Math.min(d, real));
+	}
+	G.renderScale = {
+		mode: readStore('gw.render_scale') || 'auto',
+		real: realDpr(),
+		used: realDpr(),
+		supported: false,
+	};
+	function updateDpr() {
+		G.renderScale.real = realDpr();
+		G.renderScale.used = computeDpr();
+	}
+	updateDpr();
+	try {
+		Object.defineProperty(window, 'devicePixelRatio', {
+			configurable: true,
+			get: function () {
+				return G.renderScale.used;
+			},
+		});
+		G.renderScale.supported = window.devicePixelRatio === G.renderScale.used;
+	} catch (err) {
+		console.warn('gwShell: devicePixelRatio cap unavailable:', err && err.message);
+	}
+	// mode: 'auto', '100', '75' or '50' (share of the real DPR, never below 1). Applies live.
+	G.setRenderScale = function (mode) {
+		G.renderScale.mode = String(mode || 'auto');
+		writeStore('gw.render_scale', G.renderScale.mode);
+		updateDpr();
+		window.dispatchEvent(new Event('resize'));
+		return G.renderScale.used;
+	};
+
+	// --- Page guards (§2.1): no browser zoom, scroll, pull-to-refresh, callouts or text selection.
+	for (const type of ['gesturestart', 'gesturechange', 'gestureend']) {
+		document.addEventListener(type, function (evt) {
+			evt.preventDefault();
+			S.gesturesBlocked++;
+		}, { passive: false });
+	}
+	document.addEventListener('dblclick', function (evt) {
+		evt.preventDefault();
+		S.dblclicksBlocked++;
+	}, { passive: false });
+	document.addEventListener('touchmove', function (evt) {
+		if (!isEditable(evt.target)) {
+			evt.preventDefault();
+			S.touchMovesBlocked++;
+		}
+	}, { passive: false });
+	document.addEventListener('touchstart', function (evt) {
+		// a second finger anywhere must never start a browser pinch
+		if (evt.touches.length > 1 && !isEditable(evt.target)) {
+			evt.preventDefault();
+		}
+	}, { passive: false });
+	document.addEventListener('selectstart', function (evt) {
+		if (!isEditable(evt.target)) {
+			evt.preventDefault();
+			S.selectsBlocked++;
+		}
+	});
+
+	// --- Device info (§1.1): one JSON string per bridge call, pushed again on changes (debounced).
+	const safeProbe = document.getElementById('gw-safe-probe');
+	function safeInsets() {
+		const cs = window.getComputedStyle(safeProbe);
+		return [cs.paddingLeft, cs.paddingTop, cs.paddingRight, cs.paddingBottom].map((v) => parseFloat(v) || 0);
+	}
+	function cssViewport() {
+		const vv = window.visualViewport;
+		if (vv && vv.width > 0 && vv.height > 0 && Math.abs(vv.scale - 1) < 0.01) {
+			return [vv.width, vv.height];
+		}
+		return [window.innerWidth, window.innerHeight];
+	}
+	G.deviceInfo = function () {
+		const o = touchOverride();
+		return JSON.stringify({
+			touch: touchCapable(),
+			coarse: coarsePointer(),
+			anyFine: o !== null ? !o : mq('(any-pointer: fine)'),
+			hoverNone: o !== null ? o : mq('(hover: none)'),
+			css: cssViewport(),
+			inner: [window.innerWidth, window.innerHeight],
+			screen: [window.screen.width, window.screen.height],
+			dprReal: G.renderScale.real,
+			dpr: G.renderScale.used,
+			dprApplied: true,
+			renderScale: G.renderScale.mode,
+			safe: safeInsets(),
+			orientationType: (window.screen.orientation && window.screen.orientation.type) || '',
+			isIOS: isIOS,
+			isIPhone: isIPhone,
+			standalone: mq('(display-mode: standalone)') || mq('(display-mode: fullscreen)') || navigator.standalone === true,
+			fullscreenSupported: !!(document.fullscreenEnabled || document.webkitFullscreenEnabled) && !isIPhone,
+			vibrate: 'vibrate' in navigator,
+			deviceMemory: navigator.deviceMemory || 0,
+			cores: navigator.hardwareConcurrency || 0,
+			overrides: G.overrides,
+		});
+	};
+	let deviceCb = null;
+	let deviceTimer = 0;
+	G.onDeviceChange = function (cb) {
+		deviceCb = cb;
+	};
+	G.deviceState = '';
+	G.setDeviceState = function (json) {
+		G.deviceState = String(json);
+	};
+	function onViewportChange() {
+		updateDpr();
+		clearTimeout(deviceTimer);
+		deviceTimer = setTimeout(function () {
+			S.deviceChanges++;
+			if (deviceCb) {
+				deviceCb(G.deviceInfo());
+			}
+		}, 150);
+	}
+	window.addEventListener('resize', onViewportChange);
+	window.addEventListener('orientationchange', onViewportChange);
+	if (window.visualViewport) {
+		window.visualViewport.addEventListener('resize', onViewportChange);
+	}
+
+	// --- Back (§2.7): after the first user gesture a same-URL history sentinel catches browser and
+	// Android back. Each back calls the Godot handler and re-arms, unless Godot asked to leave (title).
+	let backArmed = false;
+	let backLeaves = false;
+	let backHandler = null;
+	G.backArmed = function () {
+		return backArmed;
+	};
+	G.armBack = function () {
+		if (backArmed) {
+			return false;
+		}
+		backArmed = true;
+		window.history.pushState({ gwBack: true }, '');
+		return true;
+	};
+	G.setBackHandler = function (cb) {
+		backHandler = cb;
+	};
+	G.setBackLeaves = function (value) {
+		backLeaves = !!value;
+	};
+	window.addEventListener('popstate', function () {
+		if (!backArmed) {
+			return;
+		}
+		backArmed = false;
+		S.backPresses++;
+		if (backHandler) {
+			backHandler();
+		}
+		if (backLeaves) {
+			window.history.back();
+			return;
+		}
+		G.armBack();
+	});
+	function armOnGesture(evt) {
+		if (evt.isTrusted && G.state === 'running') {
+			G.armBack();
+		}
+	}
+	for (const type of ['pointerdown', 'keydown', 'touchend']) {
+		window.addEventListener(type, armOnGesture, true);
+	}
+
+	// --- Text input (§2.1): touch devices use the native prompt instead of Godot's virtual keyboard.
+	G.promptText = function (title, value) {
+		S.prompts++;
+		const r = window.prompt(String(title || ''), value == null ? '' : String(value));
+		return r === null ? null : String(r);
+	};
+
+	// --- Haptics (§2.8): pattern as "20,40,20" or an array of ms. No-op where unsupported (iOS Safari).
+	G.lastVibration = null;
+	G.vibrate = function (pattern) {
+		const list = Array.isArray(pattern) ? pattern : String(pattern).split(',');
+		const ms = list.map((v) => Math.max(0, parseInt(v, 10) || 0));
+		G.lastVibration = ms;
+		S.vibrations++;
+		if (!('vibrate' in navigator)) {
+			return false;
+		}
+		try {
+			return navigator.vibrate(ms.length === 1 ? ms[0] : ms);
+		} catch (err) {
+			return false;
+		}
+	};
+
+	// --- WebGL context loss (iOS drops it in the background). The save already ran on visibilitychange.
+	const ctxLost = document.getElementById('gw-ctx-lost');
+	canvas.addEventListener('webglcontextlost', function () {
+		S.contextLost++;
+		ctxLost.classList.add('gw-show');
+	});
+	ctxLost.addEventListener('click', function () {
+		G.unsaved = false;
+		window.location.reload();
+	});
+
+	// --- Frame cap fallback (§6.3): when gw.raf_cap / setFrameCap(fps) is set, rAF callbacks run only
+	// on frames that keep the cap. Off by default (Engine.max_fps is the primary mechanism).
+	G.frameCap = parseInt(readStore('gw.raf_cap'), 10) || 0;
+	G.setFrameCap = function (fps) {
+		G.frameCap = Math.max(0, parseInt(fps, 10) || 0);
+		writeStore('gw.raf_cap', String(G.frameCap));
+		return G.frameCap;
+	};
+	const nativeRaf = window.requestAnimationFrame.bind(window);
+	const nativeCancel = window.cancelAnimationFrame.bind(window);
+	const pending = new Map();
+	let rafSeq = 0;
+	let lastFrame = 0;
+	let acceptedFrame = -1;
+	window.requestAnimationFrame = function (cb) {
+		if (!(G.frameCap > 0)) {
+			return nativeRaf(cb);
+		}
+		const id = 0x40000000 + (++rafSeq);
+		const step = function (t) {
+			const interval = 1000 / G.frameCap;
+			if (t !== acceptedFrame) {
+				if (lastFrame && t - lastFrame < interval - 2) {
+					pending.set(id, nativeRaf(step));
+					return;
+				}
+				lastFrame = t;
+				acceptedFrame = t;
+			}
+			pending.delete(id);
+			cb(t);
+		};
+		pending.set(id, nativeRaf(step));
+		return id;
+	};
+	window.cancelAnimationFrame = function (id) {
+		if (pending.has(id)) {
+			nativeCancel(pending.get(id));
+			pending.delete(id);
+		} else {
+			nativeCancel(id);
+		}
+	};
+}());
+</script>
+<!-- gw-touch:end script -->
+<script src="gigawatt-a08de66e6e0a.js"></script>
+<script>
+const GODOT_CONFIG = {"args":[],"canvasResizePolicy":2,"emscriptenPoolSize":8,"ensureCrossOriginIsolationHeaders":false,"executable":"gigawatt-a08de66e6e0a","experimentalVK":false,"fileSizes":{"gigawatt-ba7a2d8a5082.pck":53717508,"gigawatt-a08de66e6e0a.wasm":39514754},"focusCanvas":true,"gdextensionLibs":[],"godotPoolSize":4,"mainPack":"gigawatt-ba7a2d8a5082.pck"};
+const GODOT_THREADS_ENABLED = false;
+window.gwShell.start(new Engine(GODOT_CONFIG), GODOT_CONFIG, GODOT_THREADS_ENABLED);
+</script>
+</body>
+</html>
+

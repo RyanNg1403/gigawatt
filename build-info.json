@@ -1,0 +1,55 @@
+{
+ "commit": "eaa33e80bfbfe96c29e2a21f8180164093000006",
+ "built_at": "2026-11-06T16:10:35Z",
+ "engine": "gigawatt-a08de66e6e0a",
+ "main_pack": "gigawatt-ba7a2d8a5082.pck",
+ "music_pack": "music.pck",
+ "music_tracks": {
+  "dir": "music",
+  "count": 33,
+  "bytes": 45103336,
+  "largest_bytes": 1757268
+ },
+ "files": {
+  "gigawatt-a08de66e6e0a.audio.position.worklet.js": {
+   "bytes": 2973,
+   "gzip_bytes": 1167
+  },
+  "gigawatt-a08de66e6e0a.audio.worklet.js": {
+   "bytes": 7298,
+   "gzip_bytes": 2204
+  },
+  "gigawatt-a08de66e6e0a.js": {
+   "bytes": 279815,
+   "gzip_bytes": 68740
+  },
+  "gigawatt-a08de66e6e0a.wasm": {
+   "bytes": 39514754,
+   "gzip_bytes": 10114291
+  },
+  "gigawatt-ba7a2d8a5082.pck": {
+   "bytes": 53717508,
+   "gzip_bytes": 51526419
+  },
+  "index.apple-touch-icon.png": {
+   "bytes": 11789,
+   "gzip_bytes": 11713
+  },
+  "index.html": {
+   "bytes": 27117,
+   "gzip_bytes": 9180
+  },
+  "index.icon.png": {
+   "bytes": 4339,
+   "gzip_bytes": 4362
+  },
+  "index.png": {
+   "bytes": 21443,
+   "gzip_bytes": 19338
+  },
+  "music.pck": {
+   "bytes": 47034776,
+   "gzip_bytes": 45193042
+  }
+ }
+}
